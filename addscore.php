@@ -1,3 +1,7 @@
+<?php
+  session_start();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -24,48 +28,60 @@
 				$screenshot_type = $_FILES['screenshot']['type'];
 				$screenshot_size = $_FILES['screenshot']['size'];
 
-				if (!empty($name) && is_numeric($score) && !empty($screenshot)) {
-					if ((($screenshot_type == 'image/gif') || ($screenshot_type == 'image/jpeg') || ($screenshot_type == 'image/pjpeg') || ($screenshot_type == 'image/png'))
-						&& ($screenshot_size > 0) && ($screenshot_size <= GW_MAXFILESIZE)) {
-						if ($_FILES['screenshot']['error'] == 0) {
-							$target = GW_UPLOADPATH . $screenshot;
-							if (move_uploaded_file($_FILES['screenshot']['tmp_name'], $target)) {
+        // Проверка соответствия идентификационной фразы, введенной пользователем,
+        // идентификациионной фразе, выведенной в изображении CAPTCHA
 
+        $user_pass_phrase = sha1($_POST['verify']);
+        if ($_SESSION['pass_phrase'] == $user_pass_phrase) {
 
-								// Write the data to the database
-								$query = "INSERT INTO guitarwars (date, name, score, screenshot) VALUES (NOW(), '$name', '$score', '$screenshot')";
-								mysqli_query($dbc, $query);
+          if (!empty($name) && is_numeric($score) && !empty($screenshot)) {
 
-								// Confirm success with the user
-								echo '<p>Thanks for adding your new high score!</p>';
-								echo '<p><strong>Name:</strong> ' . $name . '<br />';
-								echo '<strong>Score:</strong> ' . $score . '</p>';
-								echo '<img src="' . GW_UPLOADPATH . $screenshot . '" alt="" /><br />';
-								echo '<p><a href="index.php">&lt;&lt; Back to high scores</a></p>';
+            if ((($screenshot_type == 'image/gif') || ($screenshot_type == 'image/jpeg') || ($screenshot_type == 'image/pjpeg') || ($screenshot_type == 'image/png'))
+              && ($screenshot_size > 0) && ($screenshot_size <= GW_MAXFILESIZE)) {
 
-								// Clear the score data to clear the form
-								$name = "";
-								$score = "";
-								$screenshot = "";
+              if ($_FILES['screenshot']['error'] == 0) {
 
-								mysqli_close($dbc);
-							}
-							else {
-								echo '<p class="error">Извините, возникла ошибка при загрузке файла изображения.</p>';
-							}
-						}
-					}
-					else {
-						echo '<p class="error">Файл, подтверждающий рейтинг, должен' .
-							'быть файлом изображения в форматах GIF, JPEG или PNG' .
-							' и его размер не должен превышать ' . (GW_MAXFILESIZE / 1024) . ' Кб.</p>';
-					}
-					// Try to delete the temporary screen shot image file
-					//@unlink($_FILES['screenshot']['tmp_name']);
-				}
-				else {
-					echo '<p class="error">Введите, пожалуйста, всю информацию для добавления вашего рейтинга</p>';
-				}
+                $target = GW_UPLOADPATH . $screenshot;
+                if (move_uploaded_file($_FILES['screenshot']['tmp_name'], $target)) {
+
+                  // Write the data to the database
+                  $query = "INSERT INTO guitarwars (date, name, score, screenshot) VALUES (NOW(), '$name', '$score', '$screenshot')";
+                  mysqli_query($dbc, $query);
+
+                  // Confirm success with the user
+                  echo '<p>Thanks for adding your new high score!</p>';
+                  echo '<p><strong>Name:</strong> ' . $name . '<br />';
+                  echo '<strong>Score:</strong> ' . $score . '</p>';
+                  echo '<img src="' . GW_UPLOADPATH . $screenshot . '" alt="" /><br />';
+                  echo '<p><a href="index.php">&lt;&lt; Back to high scores</a></p>';
+
+                  // Clear the score data to clear the form
+                  $name = "";
+                  $score = "";
+                  $screenshot = "";
+
+                  mysqli_close($dbc);
+                }
+                else {
+                  echo '<p class="error">Извините, возникла ошибка при загрузке файла изображения.</p>';
+                }
+              }
+            }
+            else {
+              echo '<p class="error">Файл, подтверждающий рейтинг, должен' .
+                'быть файлом изображения в форматах GIF, JPEG или PNG' .
+                ' и его размер не должен превышать ' . (GW_MAXFILESIZE / 1024) . ' Кб.</p>';
+            }
+            // Try to delete the temporary screen shot image file
+            //@unlink($_FILES['screenshot']['tmp_name']);
+          }
+          else {
+            echo '<p class="error">Введите, пожалуйста, всю информацию для добавления вашего рейтинга</p>';
+          }
+        }
+        else {
+          echo '<p class="error">Введите идентификационную фразу.</p>';
+        }
 			}
 		?>
 		
@@ -78,6 +94,9 @@
 			<input type="text" id="score" name="score" value="<?php if (!empty($score)) echo $score; ?>" /><br />
 			<label for="screenshot">Файл изображения:</label>
       <input type="file" id="screenshot" name="screenshot" /><br/>
+      <label for="verify">Проверка:</label>
+      <input type="text" id="verify" name="verify" value="Введите идентификационную фразу"/>
+      <img src="captcha.php" alt="Проверка идентификационной фразы!"/>
 			<hr />
 			<input type="submit" value="Add" name="submit" />
 		</form>
